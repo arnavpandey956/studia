@@ -139,8 +139,8 @@ router.get('/:userId', async (req, res) => {
 
   const { data: friendships, error } = await supabase
     .from('friendships')
-    .select('friend_id, status, users!friend_id(id, username, name)')
-    .eq('user_id', userId)
+    .select('user_id, friend_id')
+    .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
     .eq('status', 'accepted')
 
   if (error){
@@ -148,7 +148,20 @@ router.get('/:userId', async (req, res) => {
     return res.status(500).json({ error: 'Database error' })
   }
 
-  const friends = friendships.map(f => f.users)
+  const friendIds = friendships.map(f =>
+    f.user_id === parseInt(userId) ? f.friend_id : f.user_id
+  )
+
+  const { data: friends, error: usersError } = await supabase
+    .from('users')
+    .select('id, username, name')
+    .in('id', friendIds)
+
+  if (usersError){
+    console.error(usersError);
+    return res.status(500).json({ error: 'Database error' })
+  }
+
   res.json({ friends });
 });
 

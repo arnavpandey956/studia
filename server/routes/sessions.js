@@ -75,7 +75,7 @@ router.post('/stop', async (req, res) => {
   }
 
   const endTime = new Date().toISOString();
-  const duration = Math.round((new Date(session.end_time) - new Date(session.start_time)) / 60000);
+  const duration = Math.round((new Date(endTime) - new Date(session.start_time)) / 60000);
 
   const { data: updatedSession, error: updateError } = await supabase
     .from('sessions')
