@@ -43,7 +43,8 @@ router.post('/login', async (req, res) => {
     const passwordMatches = await bcrypt.compare(password, user.password)
     if (!passwordMatches) return res.status(401).json({error: 'Invalid credentials'})
     const { password: _, ...safeUser } = user
-    res.json({ message: 'Login successful', user: safeUser })
+    const token = jwt.sign({id: user.id}, process.env.JWT_SECRET, {expiresIn: '7d'})
+    res.json({ message: 'Login successful', user: safeUser, token })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: 'Database error' })
