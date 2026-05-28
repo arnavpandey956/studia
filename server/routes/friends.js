@@ -67,10 +67,13 @@ router.post('/accept', async (req, res) => {
   }
 
   try {
-    const request = await friendshipRepo.findPendingByPair(friendId, userId)
+    const request = await friendshipRepo.findPendingByPair(userId, friendId)
     if (!request || request.status !== 'pending') return res.status(404).json({ error: 'Pending request not found' })
+    
+    if(Number(request.requester_id) === Number(userId))
+      return res.status(400).json({error: 'Cannot accept your own request'})
 
-    const friendship = await friendshipRepo.accept(friendId, userId)
+    const friendship = await friendshipRepo.accept(userId, friendId)
     res.json({ friendship })
   } catch (err) {
     console.error(err)
@@ -88,7 +91,7 @@ router.get('/:userId', async (req, res) => {
   try {
     const friendships = await friendshipRepo.findAcceptedByUserId(userId)
     const friendIds = friendships.map(f =>
-      f.user_id === parseInt(userId) ? f.friend_id : f.user_id
+      f.user_id_low === parseInt(userId) ? f.user_id_high : f.user_id_low
     )
     const friends = await userRepo.findManyByIds(friendIds)
     res.json({ friends })
