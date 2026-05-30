@@ -13,7 +13,7 @@ const CURRENT_USER = { id: '1', username: 'alice', name: 'Alice' };
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 
-  'Friday'];
+  'Friday', 'Saturday'];
 
 //calculate range for current Week
 function getWeekRange() {
@@ -119,7 +119,7 @@ return (
     </View>
 
     <View style={styles.weekCard}>
-      <Text style={styles.weekTitle}>This Week</Text>
+      <Text style={styles.weekTitle}>This Week ({weekLabel}) </Text>
       <TouchableOpacity
       style={styles.refreshBtn}
       onPress={loadWeeklySessions}
