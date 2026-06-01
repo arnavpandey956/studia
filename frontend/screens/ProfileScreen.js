@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
 } from 'react-native';
 
-const CURRENT_USER = { id: '1', username: 'alice', name: 'Alice' };
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 
@@ -67,7 +66,7 @@ function countSessions(sessions, startOfWeek, endOfWeek) {
 
 }
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ user, token, onLogout }) {
   const [weeklyCounts, setWeeklyCounts] = useState({});
   const [weekLabel, setWeekLabel] = useState('');
   const [loading, setLoading] = useState('true');
@@ -81,7 +80,9 @@ export default function ProfileScreen() {
       const { startOfWeek, endOfWeek } = getWeekRange();
       setWeekLabel(`${formatShortDate(startOfWeek)} - ${formatShortDate(endOfWeek)}`);
       //get sessions of current user
-      const response = await fetch(`${API_URL}/sessions/${CURRENT_USER.id}`);
+      const response = await fetch(`${API_URL}/sessions/${user.id}`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
       console.log("status:", response.status);
 
       const data = await response.json();
@@ -114,7 +115,7 @@ export default function ProfileScreen() {
 return (
   <View style={styles.container}>
     <View style={styles.profileCard}>
-      <Text style={styles.profileTitle}>{CURRENT_USER.name}'s Profile</Text>
+      <Text style={styles.profileTitle}>{user.name}'s Profile</Text>
       <Text style={styles.profileSubtitle}>Weekly Study Sessions</Text>
     </View>
 
@@ -136,6 +137,10 @@ return (
         </View>
       ))}
     </View>
+
+    <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
+      <Text style={styles.logoutBtnText}>Log out</Text>
+    </TouchableOpacity>
   </View>
 );
 }
@@ -210,5 +215,21 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '700',
     fontSize: 13,
+  },
+
+  logoutBtn: {
+    marginTop: 16,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E05252',
+  },
+
+  logoutBtnText: {
+    color: '#E05252',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });
