@@ -53,7 +53,7 @@ function countSessions(sessions, startOfWeek, endOfWeek) {
 
   //for every session within startOfWeek-endOfWeek, increase it's corresponding day by 1
   sessions.forEach( (session) => {
-    const sessionDate = new Date(session.start_time);
+    const sessionDate = new Date(session.startTime);
 
     if(sessionDate >= startOfWeek && sessionDate <= endOfWeek) {
       const sessionDay = DAYS[sessionDate.getDay()];
