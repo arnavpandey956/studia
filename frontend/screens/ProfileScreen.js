@@ -68,7 +68,7 @@ function countSessions(sessions, startOfWeek, endOfWeek) {
 
 }
 
-export default function ProfileScreen({ user, token, onLogout, avatarURL }) {
+export default function ProfileScreen({ user, token, onLogout, navigation }) {
   const [weeklyCounts, setWeeklyCounts] = useState({});
   const [weekLabel, setWeekLabel] = useState('');
   const [loading, setLoading] = useState(true);
@@ -142,18 +142,34 @@ return (
         <Text style={styles.profileName}>{user.name}</Text>
         <Text style={styles.profileUsername}>@{user.username}</Text>
 
+        <View style={styles.stats}>
+          <TouchableOpacity onPress={() => navigation.navigate('Friends')}>
+            <Text style={styles.stat}>{friendCount} Friends</Text>
+          </TouchableOpacity>
+        </View>
+
       </View>
+
+      <TouchableOpacity 
+        style={styles.button}
+        onPress={() => {
+          console.log('edit profile pressed');
+        }}
+      >
+        <Text style={styles.buttonText}>Edit Profile</Text>
+      </TouchableOpacity>
+      
       
     </View>
 
     <View style={styles.weekCard}>
       <Text style={styles.weekTitle}>This Week ({weekLabel}) </Text>
       <TouchableOpacity
-      style={styles.refreshBtn}
-      onPress={loadWeeklySessions}
-    >
-      <Text style={styles.refreshBtnText}>Refresh</Text>
-    </TouchableOpacity>
+        style={styles.refreshBtn}
+        onPress={loadWeeklySessions}
+      >
+        <Text style={styles.refreshBtnText}>Refresh</Text>
+      </TouchableOpacity>
 
       {DAYS.map((day) => (
         <View key={day} style={styles.dayRow}>
@@ -182,16 +198,21 @@ const styles = StyleSheet.create({
   profileCard: {
     backgroundColor: '#1A1F36',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     marginBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
 
+  profileInfo: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+
   profileName: {
     color: '#fff',
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '500',
   },
 
   profileUsername: {
@@ -200,17 +221,36 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
 
-  profileInfo: {
-    flex: 1,
-    paddingHorizontal: 12,
-  },
-
   avatar: {
     width: 80,
     height: 80,
     borderRadius: 80/2,
     borderWidth: 1.5,
     borderColor: 'dimgray',
+  },
+
+  stats: {
+    flexDirection: 'row',
+  },
+
+  stat: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    marginTop: 8,
+    fontSize: 14,
+    color: '#8892B0'
+  },
+
+  button: {
+    backgroundColor: '#8892B0',
+    borderRadius: 6,
+    alignSelf: 'flex-end',
+  },
+
+  buttonText: {
+    color: 'white',
+    fontSize: 12,
+    padding: 5,
   },
 
   weekCard: {
