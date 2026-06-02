@@ -8,6 +8,9 @@ import {
   Alert,
   TouchableOpacity,
   Image,
+  Modal,
+  TextInput,
+  ImageBackground,
 } from 'react-native';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -68,11 +71,68 @@ function countSessions(sessions, startOfWeek, endOfWeek) {
 
 }
 
-export default function ProfileScreen({ user, token, onLogout, navigation }) {
+export default function ProfileScreen({ user, token, onLogout, navigation, onUpdateUser }) {
   const [weeklyCounts, setWeeklyCounts] = useState({});
   const [weekLabel, setWeekLabel] = useState('');
   const [loading, setLoading] = useState(true);
   const [friendCount, setFriendCount] = useState(0);
+  const [editProfileVisible, setEditProfileVisible] = useState(false);
+  const [editName, setEditName] = useState(user.name);
+  const [editUsername, setEditUsername] = useState(user.username);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  function startEdit(){
+    setEditName(user.name);
+    setEditUsername(user.username);
+    setEditProfileVisible(true);
+  }
+
+  function cancelEdit(){
+    setEditProfileVisible(false);
+  }
+
+  async function saveEdit(){
+    const name = editName.trim();
+    const username = editUsername.trim();
+
+    if(!name || !username){
+      Alert.alert('Missing fields', 'Name and Username cannot be empty');
+      return;
+    }
+
+    if(name === user.name && username === user.username){ // no changes made
+      setEditProfileVisible(false);
+      return;
+    }
+
+    setIsUpdating(true);
+    try{
+      const data = await fetch(`${API_URL}/auth/update`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({name, username})
+      });
+      const update = await data.json();
+
+      if(!data.ok){
+        Alert.alert('Unable to save', update.error || 'Something went wrong.');
+        return;
+      }
+
+      onUpdateUser(update.user);
+      setEditProfileVisible(false);
+    }
+    catch(err){
+      console.log('ERROR: could not save name/username update');
+      Alert.alert('server error', 'could not reach server');
+    }
+    finally {
+      setIsUpdating(false);
+    }
+  }
 
   useEffect( () => {
     loadWeeklySessions();
@@ -152,9 +212,7 @@ return (
 
       <TouchableOpacity 
         style={styles.button}
-        onPress={() => {
-          console.log('edit profile pressed');
-        }}
+        onPress={startEdit}
       >
         <Text style={styles.buttonText}>Edit Profile</Text>
       </TouchableOpacity>
@@ -184,6 +242,58 @@ return (
     <TouchableOpacity style={styles.logoutBtn} onPress={onLogout}>
       <Text style={styles.logoutBtnText}>Log out</Text>
     </TouchableOpacity>
+
+    <Modal
+      animationType='slide'
+      onRequestClose={cancelEdit}
+      transparent
+      visible={editProfileVisible}
+    >
+      <View style={styles.modalBackground}>
+
+        <View style={styles.modalCard}>
+
+          <View style={styles.modalAvatar}>
+            <Image source={DEFAULT_AVATAR} style={styles.avatar}/>
+            <TouchableOpacity>
+              <Text>Update Image</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.fieldLabel}>Name</Text>
+          <TextInput 
+            style={styles.modalInput}
+            value={editName}
+            onChangeText={setEditName}
+          />
+
+          <Text style={styles.fieldLabel}>Username</Text>
+          <TextInput
+            style={styles.modalInput}
+            value={editUsername}
+            onChangeText={setEditUsername}
+          />
+
+          <View style={styles.modalButton}>
+            <TouchableOpacity
+              onPress={cancelEdit}
+              disabled={isUpdating}
+            >
+              <Text style={styles.modalButtonText}>Cancel</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              onPress={saveEdit}
+              disabled={isUpdating}
+            >
+              {isUpdating ? <ActivityIndicator/> : <Text style={styles.modalButtonText}>Save Changes</Text>}
+            </TouchableOpacity>
+          </View>
+
+        </View>
+
+      </View>
+    </Modal>
   </View>
 );
 }
@@ -251,6 +361,65 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     padding: 5,
+  },
+
+  modalBackground: {
+    backgroundColor: '#8892B095',
+    flex: 1,
+  },
+
+  modalCard: {
+    flex: 1,
+    justifyContent: 'center',
+    backgroundColor: 'white',
+    borderRadius: 16,
+    borderColor: 'dimgray',
+    borderWidth: 2,
+    padding: 20,
+    marginHorizontal: 16,
+    marginVertical: 80,
+  },
+
+  modalAvatar:{
+    alignSelf: 'center',
+    margin: 16,
+  },
+
+  fieldLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: 'black',
+    marginTop: 24,
+    marginBottom: 2,
+    width: '95%',
+  },
+
+  modalInput: {
+    borderColor: 'dimgray',
+    borderWidth: 1.5,
+    fontSize: 16,
+    fontWeight: '500',
+    color: 'dimgray',
+    backgroundColor: 'white',
+    marginBottom: 4,
+    padding: 8,
+  },
+
+  modalButton: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    paddingVertical: 32,
+  },
+
+  modalButtonText: {
+    backgroundColor: '#8892B0',
+    borderRadius: 8,
+    borderColor: 'dimgray',
+    borderWidth: 2,
+    padding: 6,
+    marginHorizontal: 32,
+    marginVertical: 8,
+    fontSize: 14,
   },
 
   weekCard: {
