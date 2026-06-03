@@ -106,7 +106,7 @@ export default function HomeScreen({ user, token }) {
   const [showSubjectInput, setShowSubjectInput] = useState(false);
 
   //class states
-  const [classes, setClasses] = useState(['CS 35L', 'Math 115A']);
+  const [classes, setClasses] = useState([]);
   const [classInput, setClassInput] = useState('');
   const [editingClasses, setEditingClasses] = useState(false);
 
@@ -115,7 +115,35 @@ export default function HomeScreen({ user, token }) {
 
   useEffect(() => {
     fetchSessions();
+    fetchClasses();
   }, []);
+
+  async function fetchClasses() {
+    try {
+      const res = await fetch(`${API_URL}/profile/classes`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) setClasses(data.classes || []);
+    } catch (err) {
+      console.error('Fetch classes error:', err);
+    }
+  }
+
+  async function saveClasses(updated) {
+    try {
+      await fetch(`${API_URL}/profile/classes`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ classes: updated }),
+      });
+    } catch (err) {
+      console.error('Save classes error:', err);
+    }
+  }
 
   //live timer when a session is active
   useEffect(() => {
@@ -243,12 +271,16 @@ export default function HomeScreen({ user, token }) {
       return;
     }
 
-    setClasses([...classes, trimmed]);
+    const updated = [...classes, trimmed];
+    setClasses(updated);
     setClassInput('');
+    saveClasses(updated);
   }
 
   function handleRemoveClass(cls) {
-    setClasses(classes.filter(c => c !== cls));
+    const updated = classes.filter(c => c !== cls);
+    setClasses(updated);
+    saveClasses(updated);
   }
 
   return (
