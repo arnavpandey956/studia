@@ -220,6 +220,8 @@ export default function HomeScreen({ user, token }) {
     }
   }
 
+  //when user starts a session, send notice to backend and prepare for 
+  //entering new phase 
   async function handleStartSession(subject) {
     setShowClassPicker(false);
     setSessionLoading(true);
@@ -256,6 +258,7 @@ export default function HomeScreen({ user, token }) {
     }
   }
 
+  //when user stops a session revert states to prepare for a new session
   async function handleStopSession() {
     setSessionLoading(true);
 
@@ -296,12 +299,14 @@ export default function HomeScreen({ user, token }) {
     }
   }
 
+  //helper for when user enters "note input" phase
   function handleStartNote() {
     if (!activeSession) return;
 
+    
     const endTime = new Date().toISOString();
 
-    setPendingNoteInputTime(new Date().toISOString());
+    setPendingNoteInputTime(endTime);
     setLiveElapsedTime(new Date(endTime) - new Date(activeSession.startTime));
     setShowEndNotes(true);
   }
@@ -328,6 +333,7 @@ export default function HomeScreen({ user, token }) {
     saveClasses(updated);
   }
 
+  //helper for when a user ends session, then resumes it
   function handleCancelNotes() {
     if (pendingNoteInputTime) {
       const pausedMs = Date.now() - new Date(pendingNoteInputTime).getTime();
@@ -339,28 +345,34 @@ export default function HomeScreen({ user, token }) {
     setPendingNoteInputTime(null);
   }
 
-  function handleEndSessionWithNotes() {
-    if(showEndNotes) {
-      return (
-        <View style = {styles.endSessionNotesBox}>
-          <Text style = {styles.notesLabel}>Session Notes</Text>
+  function handleNoteInput() {
+    return(
+      <>
+        <Text style = {styles.notesLabel}>Session Notes</Text>
 
-          <TextInput
-              style={[styles.input, styles.notesInput]}
-              placeholder="Recommended: What did you study?"
-              placeholderTextColor="#aaa"
-              value={sessionNotes}
-              onChangeText={setSessionNotes}
-              maxLength={150}
-              multiline
-              textAlignVertical="top"
-          />
+        <TextInput
+            style={[styles.input, styles.notesInput]}
+            placeholder="Recommended: What did you study?"
+            placeholderTextColor="#aaa"
+            value={sessionNotes}
+            onChangeText={setSessionNotes}
+            maxLength={150}
+            multiline
+            textAlignVertical="top"
+        />
 
-          <Text style = {styles.notesCounter}>
-            Char count: {sessionNotes.length}/150
-          </Text>
+        <Text style = {styles.notesCounter}>
+          Char count: {sessionNotes.length}/150
+        </Text>
+      </>
 
-          <View style = {styles.row}>
+    );
+  }
+
+  function handleEndSessionChoices() {
+    return(
+    <>
+      <View style = {styles.row}>
             <TouchableOpacity
               style={[styles.sessionBtn, styles.sessionBtnStop, { flex: 1, marginRight: 8}]}
               onPress={handleStopSession}
@@ -379,11 +391,12 @@ export default function HomeScreen({ user, token }) {
             >
               <Text style={styles.sessionBtnText}>Cancel</Text>
             </TouchableOpacity>
-          </View>
-        </View>
-      );
-    }
+      </View>    
+    </>
+    );
+  }
 
+  function showEndSessionButton() {
     return (
       <TouchableOpacity
         style={[styles.sessionBtn, styles.sessionBtnStop]}
@@ -392,8 +405,20 @@ export default function HomeScreen({ user, token }) {
       >
         <Text style={styles.sessionBtnText}>End Session</Text>
       </TouchableOpacity>
-    )
+    );
+  }
 
+  function handleEndSessionWithNotes() {
+    if(!showEndNotes) {
+      return showEndSessionButton();
+    }
+
+    return (
+      <View style = {styles.endSessionNotesBox}>
+        {handleNoteInput()}
+        {handleEndSessionChoices()}
+      </View>
+    );
   }
 
   return (
@@ -426,7 +451,6 @@ export default function HomeScreen({ user, token }) {
                       Elapsed: {formatLiveTime(liveElapsedTime)}
                     </Text>
                   </View>
-
                   {handleEndSessionWithNotes()}
                 </>
               ) : (
