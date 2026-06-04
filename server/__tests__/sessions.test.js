@@ -82,6 +82,7 @@ describe('POST /sessions/stop', () => {
     const res = await request(app)
       .post('/sessions/stop')
       .set('Authorization', `Bearer ${token1}`)
+      .send({})
 
     expect(res.statusCode).toBe(200)
     expect(res.body.updatedSession.active).toBe(false)
