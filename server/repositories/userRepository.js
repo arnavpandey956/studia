@@ -31,7 +31,7 @@ async function searchByUsername(username) {
 
 async function findManyByIds(ids) {
   const { data, error } = await supabase
-    .from('users').select('id, username, name').in('id', ids)
+    .from('users').select('id, username, name, avatar_url').in('id', ids)
   if (error) throw error
   return data
 }

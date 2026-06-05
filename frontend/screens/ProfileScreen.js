@@ -10,7 +10,7 @@ import {
   Image,
   Modal,
   TextInput,
-  ImageBackground,
+  FlatList,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -103,7 +103,62 @@ export default function ProfileScreen({ user, token, onLogout, navigation, onUpd
   const [editUsername, setEditUsername] = useState(user.username);
   const [isUpdating, setIsUpdating] = useState(false);
   const [previewURI, setPreviewURI] = useState(null);
+  const [friendRequests, setFriendRequests] = useState([]);
+  const [friendRequestsVisible, setFriendRequestsVisible] = useState(false);
 
+  async function loadFriendRequests() {
+    try{
+      const data = await fetch(`${API_URL}/friends/requests`, {
+        headers: {'Authorization': `Bearer ${token}`,}
+      });
+      const requests = await data.json();
+      if(!data.ok) return;
+      setFriendRequests(requests.requests || []);
+    }
+    catch(err){
+      console.log('ERROR: unable to load friend requests');
+    }
+  }
+
+  async function acceptRequest(friendId){
+    try{
+      const data = await fetch(`${API_URL}/friends/accept`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({friendId})
+      });
+      if(!data.ok) throw new Error('Could not accepted friend request');
+      setFriendRequests(prev => prev.filter(r => r.id !== friendId));
+      setFriendCount(prev => prev + 1);
+    }
+    catch(err){
+      console.log('ERROR: could not accept friend request');
+      Alert.alert('server error', 'could not reach server'); 
+    }
+  }
+
+  async function declineRequest(friendId){
+    try{
+      const data = await fetch(`${API_URL}/friends/decline`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({friendId})
+      });
+      if(!data.ok) throw new Error('Could not decline friend request');
+      setFriendRequests(prev => prev.filter(r => r.id !== friendId));
+    }
+    catch(err){
+      console.log('ERROR: could not decline friend request');
+      Alert.alert('server error', 'could not reach server');
+    }
+  }
+  
   function getAvatarSource() {
     if(previewURI) 
       return {uri: previewURI};
@@ -168,6 +223,7 @@ export default function ProfileScreen({ user, token, onLogout, navigation, onUpd
   useEffect( () => {
     loadWeeklySessions();
     loadFriendCount();
+    loadFriendRequests();
   }, []);
 
   async function loadWeeklySessions() {
@@ -226,7 +282,7 @@ export default function ProfileScreen({ user, token, onLogout, navigation, onUpd
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1,1],
-      quality: 1,
+      quality: 0.5,
     });
     if(result.canceled) return;
 
@@ -274,6 +330,12 @@ export default function ProfileScreen({ user, token, onLogout, navigation, onUpd
   }
 return (
   <View style={styles.container}>
+
+    <TouchableOpacity style={styles.notificationCard} onPress={() => setFriendRequestsVisible(true)}>
+      <Text style={styles.notificationText}>Notifications</Text>
+      <Text style={styles.notificationText}>{friendRequests.length} Unread</Text>
+    </TouchableOpacity>
+
     <View style={styles.profileCard}>
 
       <Image style={styles.avatar} source={getAvatarSource()} />
@@ -383,6 +445,54 @@ return (
 
       </View>
     </Modal>
+
+    <Modal
+      animationType='slide'
+      onRequestClose={() => setFriendRequestsVisible(false)}
+      transparent
+      visible={friendRequestsVisible}
+    >
+      <View style={styles.modalBackground}>
+
+        <View style={styles.modalCard}>
+
+          <Text style={styles.modalHeader}>Friend Requests</Text>
+
+          <FlatList
+            data={friendRequests}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={({item}) => (
+              <View>
+                <Image source={item.avatar_url ? { uri: item.avatar_url } : DEFAULT_AVATAR} style={styles.avatar} />
+                <View>
+                  <Text>{item.name}</Text>
+                  <Text>@{item.username}</Text>
+                </View>
+
+                <TouchableOpacity onPress={() => acceptRequest(item.id)}>
+                  <Text>Accept</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={() => declineRequest(item.id)}>
+                  <Text>Decline</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            ListEmptyComponent={<Text>No Friend Requests</Text>}
+          />          
+
+          <View style={styles.modalButton}>
+            <TouchableOpacity
+              onPress={() => setFriendRequestsVisible(false)}
+            >
+              <Text style={styles.modalButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+
+        </View>
+
+      </View>
+    </Modal>
   </View>
 );
 }
@@ -392,6 +502,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F2F4F8',
     padding: 16,
+  },
+
+  notificationCard: {
+    backgroundColor: '#8892B070',
+    borderRadius: 8,
+    borderColor: '#8892B070',
+    borderWidth: 1,
+    padding: 8,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    display: 'flex',
+    justifyContent: 'space-between',
+  },
+
+  notificationText: {
+    fontSize: 14,
+    color: 'black',
   },
 
   profileCard: {
