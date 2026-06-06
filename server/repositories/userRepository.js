@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt')
 
 async function findByUsername(username) {
   const { data, error } = await supabase
-    .from('users').select().eq('username', username).single()
+    .from('users').select().ilike('username', username).single()
   if (error && error.code !== 'PGRST116') throw error
   return data
 }
@@ -37,10 +37,9 @@ async function findManyByIds(ids) {
 }
 
 async function create({ username, password, name }) {
-  const hashedPassword = await
-  bcrypt.hash(password, 10)
+  const hashedPassword = await bcrypt.hash(password, 10)
   const { data, error } = await supabase
-    .from('users').insert({ username, password: hashedPassword, name }).select().single()
+    .from('users').insert({ username: username.toLowerCase(), password: hashedPassword, name }).select().single()
   if (error) throw error
   return data
 }

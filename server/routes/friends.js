@@ -175,6 +175,7 @@ router.get('/acceptances', async (req, res) => {
   const userId = req.user.id;
   try {
     const acceptances = await friendshipRepo.findAcceptedRequestsByUserId(userId)
+    if (!acceptances.length) return res.json({ acceptances: [] })
     const friendIds = acceptances.map(f =>
       f.user_id_low === userId ? f.user_id_high : f.user_id_low
     )
@@ -195,6 +196,7 @@ router.get('/:userId', async (req, res) => {
   }
   try {
     const friendships = await friendshipRepo.findAcceptedByUserId(userId)
+    if (!friendships.length) return res.json({ friends: [] })
     const friendIds = friendships.map(f =>
       f.user_id_low === parseInt(userId) ? f.user_id_high : f.user_id_low
     )

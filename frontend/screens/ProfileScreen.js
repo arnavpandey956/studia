@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -187,7 +188,6 @@ export default function ProfileScreen({ user, token, onLogout, navigation, onUpd
   const [friendRequests, setFriendRequests] = useState([]);
   const [friendRequestsVisible, setFriendRequestsVisible] = useState(false);
   const [newAcceptances, setNewAcceptances] = useState([]);
-  const [acceptancesVisible, setAcceptancesVisible] = useState(false);
   const seenAcceptances = useRef(new Set());
 
   async function loadFriendRequests() {
@@ -206,12 +206,16 @@ export default function ProfileScreen({ user, token, onLogout, navigation, onUpd
 
   async function loadAcceptances() {
     try {
+      const stored = await AsyncStorage.getItem('seenAcceptances');
+      const seen = new Set(stored ? JSON.parse(stored) : []);
+      seenAcceptances.current = seen;
+
       const data = await fetch(`${API_URL}/friends/acceptances`, {
         headers: { 'Authorization': `Bearer ${token}` },
       });
       const result = await data.json();
       if (!data.ok) return;
-      const unseen = (result.acceptances || []).filter(u => !seenAcceptances.current.has(u.id));
+      const unseen = (result.acceptances || []).filter(u => !seen.has(u.id));
       setNewAcceptances(unseen);
     } catch (err) {
       console.error('ERROR: could not load acceptances', err);
@@ -452,19 +456,12 @@ return (
   <ScrollView>
 
     <TouchableOpacity style={styles.notificationCard} onPress={() => setFriendRequestsVisible(true)}>
-      <Text style={styles.notificationText}>🔔 Friend Requests</Text>
-      {friendRequests.length > 0
-        ? <View style={styles.notificationBadge}><Text style={styles.notificationBadgeText}>{friendRequests.length}</Text></View>
+      <Text style={styles.notificationText}>🔔 Notifications</Text>
+      {(friendRequests.length + newAcceptances.length) > 0
+        ? <View style={styles.notificationBadge}><Text style={styles.notificationBadgeText}>{friendRequests.length + newAcceptances.length}</Text></View>
         : <Text style={styles.notificationTextMuted}>None</Text>
       }
     </TouchableOpacity>
-
-    {newAcceptances.length > 0 && (
-      <TouchableOpacity style={[styles.notificationCard, styles.notificationCardGreen]} onPress={() => setAcceptancesVisible(true)}>
-        <Text style={styles.notificationText}>✅ Accepted Your Request</Text>
-        <View style={styles.notificationBadge}><Text style={styles.notificationBadgeText}>{newAcceptances.length}</Text></View>
-      </TouchableOpacity>
-    )}
 
     <View style={styles.profileCard}>
 
@@ -603,73 +600,73 @@ return (
 
         <View style={styles.modalCard}>
 
-          <Text style={styles.modalHeader}>Friend Requests</Text>
+          <Text style={styles.modalHeader}>Notifications</Text>
 
-          <FlatList
-            data={friendRequests}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={({item}) => (
-              <View style={styles.profileCardFriend}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <Image source={item.avatar_url ? { uri: item.avatar_url } : DEFAULT_AVATAR} style={styles.avatar} />
-                  <View style={{ paddingHorizontal: 12, flex: 1 }}>
+          {newAcceptances.length > 0 && (
+            <>
+              <Text style={styles.notifSectionLabel}>Accepted Your Request</Text>
+              <FlatList
+                data={newAcceptances}
+                keyExtractor={(item) => String(item.id)}
+                scrollEnabled={false}
+                renderItem={({ item }) => (
+                  <View style={styles.profileCardFriend}>
                     <Text style={styles.friendRequestName} numberOfLines={1}>{item.name}</Text>
                     <Text style={styles.profileUsername} numberOfLines={1}>@{item.username}</Text>
                   </View>
-                </View>
+                )}
+              />
+            </>
+          )}
 
-                <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-                  <TouchableOpacity style={styles.acceptButton} onPress={() => acceptRequest(item.id)}>
-                    <Text style={styles.acceptButtonText}>Accept</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity style={styles.declineButton} onPress={() => declineRequest(item.id)}>
-                    <Text style={styles.declineButtonText}>Decline</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-            ListEmptyComponent={<Text style={styles.emptyText}>No pending friend requests</Text>}
-          />
+          {friendRequests.length > 0 && (
+            <>
+              <Text style={styles.notifSectionLabel}>Friend Requests</Text>
+              <FlatList
+                data={friendRequests}
+                keyExtractor={(item) => String(item.id)}
+                scrollEnabled={false}
+                renderItem={({item}) => (
+                  <View style={styles.profileCardFriend}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <Image source={item.avatar_url ? { uri: item.avatar_url } : DEFAULT_AVATAR} style={styles.avatar} />
+                      <View style={{ paddingHorizontal: 12, flex: 1 }}>
+                        <Text style={styles.friendRequestName} numberOfLines={1}>{item.name}</Text>
+                        <Text style={styles.profileUsername} numberOfLines={1}>@{item.username}</Text>
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                      <TouchableOpacity style={styles.acceptButton} onPress={() => acceptRequest(item.id)}>
+                        <Text style={styles.acceptButtonText}>Accept</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.declineButton} onPress={() => declineRequest(item.id)}>
+                        <Text style={styles.declineButtonText}>Decline</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              />
+            </>
+          )}
 
-          <TouchableOpacity style={styles.closeButton} onPress={() => setFriendRequestsVisible(false)}>
+          {friendRequests.length === 0 && newAcceptances.length === 0 && (
+            <Text style={styles.emptyText}>No new notifications</Text>
+          )}
+
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={async () => {
+              newAcceptances.forEach(u => seenAcceptances.current.add(u.id));
+              await AsyncStorage.setItem('seenAcceptances', JSON.stringify([...seenAcceptances.current]));
+              setNewAcceptances([]);
+              setFriendRequestsVisible(false);
+            }}
+          >
             <Text style={styles.closeButtonText}>Close</Text>
           </TouchableOpacity>
 
         </View>
 
-      </View>
-    </Modal>
-
-    <Modal
-      animationType='slide'
-      transparent
-      visible={acceptancesVisible}
-      onRequestClose={() => setAcceptancesVisible(false)}
-    >
-      <View style={styles.modalBackground}>
-        <View style={styles.modalCard}>
-          <Text style={styles.modalHeader}>New Friends</Text>
-          <FlatList
-            data={newAcceptances}
-            keyExtractor={(item) => String(item.id)}
-            renderItem={({ item }) => (
-              <View style={styles.profileCardFriend}>
-                <Text style={styles.friendRequestName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.profileUsername} numberOfLines={1}>@{item.username}</Text>
-              </View>
-            )}
-          />
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => {
-              newAcceptances.forEach(u => seenAcceptances.current.add(u.id));
-              setNewAcceptances([]);
-              setAcceptancesVisible(false);
-            }}
-          >
-            <Text style={styles.closeButtonText}>Done</Text>
-          </TouchableOpacity>
-        </View>
       </View>
     </Modal>
   </View>
@@ -785,6 +782,13 @@ const styles = StyleSheet.create({
     color: '#8892B0',
     fontSize: 15,
     marginVertical: 24,
+  },
+  notifSectionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8892B0',
+    marginTop: 6,
+    marginBottom: 4,
   },
 
   closeButton: {

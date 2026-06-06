@@ -132,7 +132,7 @@ router.patch('/update', requireAuth, async (req, res) => {
   if(name && name.trim())
     fields.name = name.trim();
   if(username && username.trim())
-    fields.username = username.trim();
+    fields.username = username.trim().toLowerCase();
 
   if(Object.keys(fields).length === 0)
     return res.status(400).json({error: 'no fields to update'});
